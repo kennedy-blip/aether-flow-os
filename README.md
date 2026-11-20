@@ -28,6 +28,8 @@ bash scripts/build-android.sh
 
 This builds the web app, synchronizes Capacitor, assembles a **debug-signed universal APK**, writes the APK and its SHA-256 manifest under `public/releases/`, then rebuilds `dist/` to serve both. Deploy that final `dist/` folder to Vercel. The debug APK is for sideloading, not Play Store distribution.
 
-The **Build and bundle Android APK** GitHub Actions workflow publishes the binary and combined web artifacts. For automatic Vercel deployment, configure `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID` in the repository's Actions secrets. The workflow deploys the combined output to Preview for branches and Production for `main`. If using this flow, avoid competing Vercel Git deployments that build without the Android artifact.
+The **Build and bundle Android APK** GitHub Actions workflow publishes the binary and combined web artifacts.
 
 An ordinary `npm run build` works without Android tooling. Until the APK is published, the web button downloads a clearly labeled installation companion instead of a broken or counterfeit APK. The QR code opens the download center on the same web origin; use a public deployment URL if the phone cannot access your preview.
+
+Production Vercel builds fetch the APK from the GitHub release tagged `android-<commit>`, verify its checksum, and bundle it before compiling the site. This path does not require Vercel secrets in GitHub Actions. If a deploy times out waiting for the APK, retry the deploy after the Android workflow completes.

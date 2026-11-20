@@ -1,7 +1,7 @@
 name: Build and bundle Android APK
 on: [push, workflow_dispatch]
 permissions:
-  contents: read
+  contents: write
 jobs:
   bundle:
     runs-on: ubuntu-latest
@@ -31,19 +31,15 @@ jobs:
           name: aetherflow-web-with-apk
           path: dist/
           if-no-files-found: error
-      - name: Deploy web and APK together to Vercel
+      - name: Publish verified Android release
+        if: github.ref == 'refs/heads/main'
         env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if [[ -z "$VERCEL_TOKEN" || -z "$VERCEL_ORG_ID" || -z "$VERCEL_PROJECT_ID" ]]; then
-            echo 'Vercel credentials not configured; use the bundled web artifact.'
-            exit 0
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify public/releases/aetherflow-release.apk
+          tag="android-$GITHUB_SHA"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release already published: $tag"
+          else
+            gh release create "$tag" --target "$GITHUB_SHA" --title "Android build ${GITHUB_SHA:0:7}" --notes 'Debug-signed universal APK for sideloading.' --latest=false public/releases/aetherflow-release.apk public/releases/manifest.json
           fi
-          mkdir -p .vercel/output/static
-          cp -R dist/. .vercel/output/static/
-          printf '%s\n' '{"version":3,"routes":[{"src":"/releases/aetherflow-release.apk","headers":{"Content-Type":"application/vnd.android.package-archive","Content-Disposition":"attachment; filename=AetherFlow-OS-v1.0.0.apk"},"continue":true},{"handle":"filesystem"}]}' > .vercel/output/config.json
-          target=()
-          if [[ "$GITHUB_REF" == refs/heads/main ]]; then target+=(--prod); fi
-          npx --yes vercel@48 deploy --prebuilt "${target[@]}" --token "$VERCEL_TOKEN" --yes

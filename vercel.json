@@ -4,7 +4,12 @@
   "headers": [
     {
       "source": "/sw.js",
-      "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
     },
     {
       "source": "/releases/aetherflow-release.apk",
@@ -19,5 +24,6 @@
         }
       ]
     }
-  ]
+  ],
+  "buildCommand": "node scripts/fetch-android.mjs && npm run build"
 }

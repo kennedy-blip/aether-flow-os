@@ -1,0 +1,17 @@
+AETHERFLOW OS / ANDROID INSTALLATION COMPANION
+
+This text file is not an APK. If this deployment does not yet host a binary,
+open your repository's Actions tab and select a successful Android workflow run.
+Download the aetherflow-android artifact and extract aetherflow-release.apk.
+
+Build on your own machine (Node.js 22, Java 17, Android SDK 34):
+  npm ci
+  bash scripts/build-android.sh
+The output is public/releases/aetherflow-release.apk. The adjacent JSON manifest
+records its SHA-256 checksum, byte count, version and source commit.
+
+Open the APK on Android. If prompted, allow this browser or file manager to
+install unknown apps, then turn the permission off after installation.
+The CI file is debug-signed for sideloading, not Play Store distribution.
+The bundled workspace can be opened offline. Web and Android have separate
+local databases. The queue demonstrates sync but does not upload records.

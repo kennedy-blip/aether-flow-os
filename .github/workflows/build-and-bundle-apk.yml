@@ -1,0 +1,49 @@
+name: Build and bundle Android APK
+on: [push, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
+      - run: npm ci
+      - run: bash scripts/build-android.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aetherflow-android
+          path: |
+            public/releases/aetherflow-release.apk
+            public/releases/manifest.json
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aetherflow-web-with-apk
+          path: dist/
+          if-no-files-found: error
+      - name: Deploy web and APK together to Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [[ -z "$VERCEL_TOKEN" || -z "$VERCEL_ORG_ID" || -z "$VERCEL_PROJECT_ID" ]]; then
+            echo 'Vercel credentials not configured; use the bundled web artifact.'
+            exit 0
+          fi
+          mkdir -p .vercel/output/static
+          cp -R dist/. .vercel/output/static/
+          printf '%s\n' '{"version":3,"routes":[{"src":"/releases/aetherflow-release.apk","headers":{"Content-Type":"application/vnd.android.package-archive","Content-Disposition":"attachment; filename=AetherFlow-OS-v1.0.0.apk"},"continue":true},{"handle":"filesystem"}]}' > .vercel/output/config.json
+          target=()
+          if [[ "$GITHUB_REF" == refs/heads/main ]]; then target+=(--prod); fi
+          npx --yes vercel@48 deploy --prebuilt "${target[@]}" --token "$VERCEL_TOKEN" --yes
